@@ -1,7 +1,8 @@
 """The base command."""
 
-import logging
 from utils import *
+from json import dumps
+import logging, os, signal, sys, time, tempfile
 
 logger = None
 
@@ -18,6 +19,30 @@ class Base(object):
         else:
             logging.basicConfig(level = logging.INFO)
         logger = logging.getLogger(__name__)
+        logger.debug('cli options: %s'%dumps(self.options, indent=2, sort_keys=True))
+        # temp run directory
+        self.runDir = tempfile.mkdtemp(prefix='ndnrtc-stream.')
+        logger.debug("temporary runtime directory %s"%self.runDir)
+
+        signal.signal(signal.SIGINT, self.signal_handler)
 
     def run(self):
         raise NotImplementedError('You must implement the run() method yourself!')
+
+    def signal_handler(self, sig, frame):
+        logger.warn('caught stop signal...')
+        self.stopChildren()
+
+    def stopChildren(self):
+        logger.debug("stopping child processes...")
+        try:
+            for p in self.childrenProcs:
+                self.kill(p)
+        except:
+            pass
+        logger.debug("child processes stopped")
+
+    def kill(self, proc):
+        # os.kill(proc.pid, signal.SIGTERM)
+        if proc.poll() == None:
+            proc.terminate()

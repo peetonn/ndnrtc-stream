@@ -7,7 +7,6 @@ import os
 import tempfile
 
 from .base import *
-from json import dumps
 from ndnrtc_stream.commands.utils import *
 
 logger = logging.getLogger(__name__)
@@ -23,7 +22,7 @@ u'produce = {\n\
             type = "pipe";\n\
         };\n\
         threads = ({\n\
-            name = "720p";\n\
+            name = "t";\n\
         });\n\
     });\n\
 };\n'
@@ -33,20 +32,31 @@ class Publish(Base):
         Base.__init__(self, options, args, kwargs)
 
     def run(self):
-        logger.debug('cli options: %s'%dumps(self.options, indent=2, sort_keys=True))
-        # temp run directory
-        self.runDir = tempfile.mkdtemp(prefix='ndnrtc-stream-publish.')
-        logger.debug("temporary runtime directory %s"%self.runDir)
-
+        self.setupVideoSize()
         self.createSourcePipe()
         self.createPreviewPipe()
         self.setupProducerConfig()
         self.setupSigningIdentity()
-        # self.ffplayProc = startFfplay(self.previewPipe)
-        # self.ffmpegProc = startFfmpeg(self.sourcePipe, self.options['--video-size'])
-        
-        # start ndnrtc-client
-        startNdnrtcClient()
+        self.setupVerificationPolicy()
+
+        self.ffplayProc = startFfplay(self.previewPipe, self.videoWidth, self.videoHeight)
+        self.ffmpegProc = startFfmpeg(self.sourcePipe, self.previewPipe, self.videoWidth, self.videoHeight)
+        self.ndnrtcClientProc = startNdnrtcClient(self.configFile, self.signingIdentity, self.policyFile)
+        self.childrenProcs = [self.ffplayProc, self.ffmpegProc, self.ndnrtcClientProc]
+
+        # proc = self.ndnrtcClientProc
+        # proc = self.ffmpegProc
+        proc = self.ffplayProc
+        try:
+            while proc.poll() == None:
+                line = proc.stderr.readline()
+                if self.options['--verbose']:
+                    sys.stdout.write(line)
+        except:
+            pass
+
+        self.stopChildren()
+        logger.info("completed")
 
     def createSourcePipe(self):
         self.sourcePipe = os.path.join(self.runDir, 'camera')
@@ -61,7 +71,7 @@ class Publish(Base):
     def setupProducerConfig(self):
         global sampleConfig
         if self.options['--config_file']:
-            self.config = libconf.loads(self.options['--config_file'])
+            self.config = libconf.load(self.options['--config_file'])
         else:
             self.config = libconf.loads(sampleConfig)
             self.config['produce']['streams'][0]['source']['name'] = self.sourcePipe
@@ -107,6 +117,23 @@ class Publish(Base):
         logger.info('will publish stream under %s'%self.ndnrtcClientPrefix)
         logger.info('data will be signed using %s identity'%self.signingIdentity)
 
+    def setupVideoSize(self):
+        if self.options['--video_size']:
+            resolution = self.options['--video_size'].split('x')
+            if len(resolution) < 2:
+                logger.error('incorrect video size specified: %s. must be in a form <width>x<height>')
+                raise Exception('incorrect video size specified. must be in a form <width>x<height>')
+            self.videoWidth = int(resolution[0])
+            self.videoHeight = int(resolution[1])
+        else:
+            self.videoWidth = 1280
+            self.videoHeight = 720
+
+    def setupVerificationPolicy(self):
+        self.policyFile = os.path.join(self.runDir, 'policy.conf')
+        with io.open(self.policyFile, 'w') as f:
+            f.write(utils.samplePolicyAny)
+        logger.debug('setup policy file at %s'%self.policyFile)
 
 
 
