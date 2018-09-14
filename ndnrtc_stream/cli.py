@@ -2,8 +2,8 @@
 ndnrtc-stream
 
 Usage:
-  ndnrtc-stream publish <stream_prefix> [-i <identity> -s <video_size> -b <bitrate> -c <config_file>]
-  ndnrtc-stream fetch <stream_prefix> [-t <trust_schema> -c <config_file>]
+  ndnrtc-stream publish [<prefix> -i <identity> -s <video_size> -b <bitrate> -c <config_file> -v <verbose>]
+  ndnrtc-stream fetch <stream_prefix> [-t <trust_schema> -c <config_file> -v <verbose>]
   ndnrtc-stream -h | --help
   ndnrtc-stream --version
 
@@ -15,9 +15,12 @@ Options:
   -b,--bitrate=<bitrate>            Video stream target encoding bitrate in Kbps.
   -c,--config_file=<config_file>    ndnrtc-client config file.
   -t,--trust_schema=<trust_schema>  Trust schema verification policy.
+  -v,--verbose                      Verbose output.
 
 Examples:
-  ndnrtc-stream publish /ndnrtc/first-stream
+  ndnrtc-stream publish
+  ndnrtc-stream publish /ndn/edu/ucla/cs/alex
+  ndnrtc-stream publish /ndn/edu/ucla/cs/alex -i /ndn/edu/csu/alex
   ndnrtc-stream fetch /ndnrtc/first-stream
 
 Help:
@@ -25,13 +28,9 @@ Help:
   https://github.com/remap/ndnrtc-stream
 """
 
-
 from inspect import getmembers, isclass
-
 from docopt import docopt
-
 from . import __version__ as VERSION
-
 
 def main():
     """Main CLI entrypoint."""

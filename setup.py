@@ -18,21 +18,21 @@ with open(join(this_dir, 'README.md'), encoding='utf-8') as file:
     except (IOError, ImportError):
         long_description = ''
 
-#class RunTests(Command):
-#    """Run all tests."""
-#    description = 'run tests'
-#    user_options = []
-#
-#    def initialize_options(self):
-#        pass
-#
-#    def finalize_options(self):
-#        pass
-#
-#    def run(self):
-#        """Run all tests!"""
-#        errno = call(['py.test', '--cov=skele', '--cov-report=term-missing'])
-#        raise SystemExit(errno)
+class RunTests(Command):
+    """Run all tests."""
+    description = 'run tests'
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        """Run all tests!"""
+        errno = call(['py.test', '--cov=ndnrtc-stream', '--cov-report=term-missing'])
+        raise SystemExit(errno)
 
 
 setup(
@@ -43,7 +43,7 @@ setup(
     url = 'https://github.com/remap/ndnrtc-stream',
     author = 'Peter Gusev',
     author_email = 'peter@remap.ucla.edu',
-    license = 'UNLICENSE',
+    license = 'UNLICENSED',
     classifiers = [
         'Intended Audience :: Developers',
         'Topic :: Utilities',
@@ -60,14 +60,14 @@ setup(
     ],
     keywords = 'NDN ndnrtc ndnrtc-client',
     packages = find_packages(exclude=['docs', 'tests*']),
-    install_requires = ['docopt', 'docopt'],
-    #extras_require = {
-    #    'test': ['coverage', 'pytest', 'pytest-cov'],
-    #},
+    install_requires = ['docopt', 'docopt', 'libconf'],
+    extras_require = {
+        'test': ['coverage', 'pytest', 'pytest-cov'],
+    },
     entry_points = {
         'console_scripts': [
             'ndnrtc-stream=ndnrtc_stream.cli:main',
         ],
     },
-    #cmdclass = {'test': RunTests},
+    cmdclass = {'test': RunTests},
 )

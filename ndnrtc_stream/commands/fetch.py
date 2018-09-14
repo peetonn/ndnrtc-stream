@@ -2,6 +2,9 @@
 
 from .base import Base
 from json import dumps
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Fetch(Base):
     def __init__(self, options, *args, **kwargs):
