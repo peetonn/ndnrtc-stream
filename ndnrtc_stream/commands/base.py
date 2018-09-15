@@ -4,7 +4,7 @@ from utils import *
 from json import dumps
 import logging, os, signal, sys, time, tempfile
 
-logger = None
+logger = logging.getLogger(__name__)
 
 class Base(object):
     """A base command."""
@@ -18,7 +18,11 @@ class Base(object):
             logging.basicConfig(level = logging.DEBUG)
         else:
             logging.basicConfig(level = logging.INFO)
-        logger = logging.getLogger(__name__)
+        ch = logging.StreamHandler(sys.stdout)
+        ch.setFormatter(CustomFormatter())
+        logger.propagate = False
+        logger.handlers = [ch]
+
         logger.debug('cli options: %s'%dumps(self.options, indent=2, sort_keys=True))
         # temp run directory
         self.runDir = tempfile.mkdtemp(prefix='ndnrtc-stream.')

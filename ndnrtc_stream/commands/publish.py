@@ -10,6 +10,10 @@ from .base import *
 from ndnrtc_stream.commands.utils import *
 
 logger = logging.getLogger(__name__)
+ch = logging.StreamHandler(sys.stdout)
+ch.setFormatter(CustomFormatter())
+logger.propagate = False
+logger.handlers = [ch]
 
 sampleConfig = \
 u'produce = {\n\

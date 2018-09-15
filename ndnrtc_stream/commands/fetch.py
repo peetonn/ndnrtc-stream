@@ -11,6 +11,10 @@ from json import dumps
 from ndnrtc_stream.commands.utils import *
 
 logger = logging.getLogger(__name__)
+ch = logging.StreamHandler(sys.stdout)
+ch.setFormatter(CustomFormatter())
+logger.propagate = False
+logger.handlers = [ch]
 
 sampleConfig= \
 u'consume = {\n\
@@ -40,7 +44,8 @@ class Fetch(Base):
         self.ffplayProc = startFfplay(self.previewPipe, self.videoWidth, self.videoHeight)
         self.ndnrtcClientProc = startNdnrtcClient(self.configFile, self.signingIdentity, self.policyFile)
         self.childrenProcs = [self.ndnrtcClientProc, self.ffplayProc]
-
+        
+        logger.info('fetching from %s'%self.basePrefix)
         # proc = self.ndnrtcClientProc
         proc = self.ffplayProc
         try:
@@ -61,8 +66,8 @@ class Fetch(Base):
         else:
             self.config = libconf.loads(sampleConfig)
             streamPrefix = self.options['<stream_prefix>']
-            basePrefix = streamPrefix if streamPrefix.endswith(utils.ndnrtcClientInstanceName) else os.path.join(streamPrefix, utils.ndnrtcClientInstanceName)
-            self.config['consume']['streams'][0]['base_prefix'] = basePrefix
+            self.basePrefix = streamPrefix if streamPrefix.endswith(utils.ndnrtcClientInstanceName) else os.path.join(streamPrefix, utils.ndnrtcClientInstanceName)
+            self.config['consume']['streams'][0]['base_prefix'] = self.basePrefix
             self.sinkPipe = os.path.join(self.runDir, 'sink')
             self.config['consume']['streams'][0]['sink']['name'] = self.sinkPipe
         self.configFile = os.path.join(self.runDir, 'consumer.cfg')

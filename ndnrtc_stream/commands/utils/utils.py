@@ -1,9 +1,7 @@
 """ Utils """
 
-import logging
+import logging, sys
 from subprocess import PIPE, Popen as popen
-
-logger = logging.getLogger(__name__)
 
 ffmpegCmd = "ffmpeg"
 ffplayCmd = "ffplay"
@@ -51,6 +49,35 @@ u'validator\n\
     }\n\
 }'
 
+# adapted from https://stackoverflow.com/a/6290946/846340
+class CustomFormatter(logging.Formatter):
+    normal_fmt  = '%(asctime)s [%(levelname)s] : %(message)s'
+    dbg_fmt  = '%(asctime)s [%(levelname)s] - %(name)s : %(message)s'
+
+    def __init__(self, fmt='%(asctime)s [%(levelname)s] : %(message)s'):
+        logging.Formatter.__init__(self, fmt)
+
+    def format(self, record):
+        # Save the original format configured by the user
+        # when the logger formatter was instantiated
+        format_orig = self._fmt
+        # Replace the original format with one customized by logging level
+        if logging.getLogger(record.name).getEffectiveLevel() == logging.DEBUG:
+            self._fmt = CustomFormatter.dbg_fmt
+        else:
+            self._fmt = CustomFormatter.normal_fmt
+        # Call the original formatter class to do the grunt work
+        result = logging.Formatter.format(self, record)
+        
+        # Restore the original format configured by the user
+        self._fmt = format_orig
+        return result
+
+logger = logging.getLogger(__name__)
+ch = logging.StreamHandler(sys.stdout)
+ch.setFormatter(CustomFormatter())
+logger.propagate = False
+logger.handlers = [ch]
 
 def startFfplay(previewPipe, w, h):
     proc = popen([ffplayCmd, '-f', 'rawvideo', 

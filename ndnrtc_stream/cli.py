@@ -31,6 +31,10 @@ Help:
 from inspect import getmembers, isclass
 from docopt import docopt
 from . import __version__ as VERSION
+import logging
+
+rootLogger = logging.getLogger()
+rootLogger.handlers = []
 
 def main():
     """Main CLI entrypoint."""
