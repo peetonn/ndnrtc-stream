@@ -79,8 +79,9 @@ ch.setFormatter(CustomFormatter())
 logger.propagate = False
 logger.handlers = [ch]
 
-def startFfplay(previewPipe, w, h):
+def startFfplay(previewPipe, w, h, str=''):
     proc = popen([ffplayCmd, '-f', 'rawvideo', 
+                    '-vf', 'drawtext=text=\'%{localtime} '+str+'\': x=10: y=10: fontcolor=white: fontsize=20: box=1: boxcolor=0x00000000@1',
                     '-pixel_format', '0rgb',
                     '-video_size', '%dx%d'%(w,h),
                     '-i', previewPipe],
@@ -95,7 +96,7 @@ def startFfmpeg(cameraPipe, previewPipe, w,h):
                     '-pixel_format', '0rgb',
                     '-framerate', '25',
                     '-video_size', '%dx%d'%(w,h),
-                    '-i', '0', 
+                    '-i', '0',
                     '-map', '0:v',
                     '-c', 'copy',
                     '-f', 'rawvideo',

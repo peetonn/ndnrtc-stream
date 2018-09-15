@@ -43,7 +43,8 @@ class Publish(Base):
         self.setupSigningIdentity()
         self.setupVerificationPolicy()
 
-        self.ffplayProc = startFfplay(self.previewPipe, self.videoWidth, self.videoHeight)
+        self.ffplayProc = startFfplay(self.previewPipe, self.videoWidth, self.videoHeight, 
+                                        str=' publishing %s'%self.ndnrtcClientPrefix)
         self.ffmpegProc = startFfmpeg(self.sourcePipe, self.previewPipe, self.videoWidth, self.videoHeight)
         self.ndnrtcClientProc = startNdnrtcClient(self.configFile, self.signingIdentity, self.policyFile)
         self.childrenProcs = [self.ffplayProc, self.ffmpegProc, self.ndnrtcClientProc]

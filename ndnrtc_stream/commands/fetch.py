@@ -41,7 +41,8 @@ class Fetch(Base):
         self.setupVerificationPolicy()
         self.setupPreviewPipe()
 
-        self.ffplayProc = startFfplay(self.previewPipe, self.videoWidth, self.videoHeight)
+        self.ffplayProc = startFfplay(self.previewPipe, self.videoWidth, self.videoHeight,
+                                        str=' fetching %s'%self.basePrefix)
         self.ndnrtcClientProc = startNdnrtcClient(self.configFile, self.signingIdentity, self.policyFile)
         self.childrenProcs = [self.ndnrtcClientProc, self.ffplayProc]
         
