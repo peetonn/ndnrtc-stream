@@ -5,7 +5,7 @@ from subprocess import PIPE, Popen as popen
 
 ffmpegCmd = "ffmpeg"
 ffplayCmd = "ffplay"
-ndnrtcClientCmd = "ndnrtc-client2"
+ndnrtcClientCmd = "ndnrtc-client"
 ndnsecCmd = "ndnsec"
 ndnrtcClientInstanceName = 'rtc-stream'
 defaultRunTime = 10000
