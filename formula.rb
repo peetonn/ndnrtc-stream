@@ -4,7 +4,7 @@ class ndnrtc_stream < Formula
   desc "A python wrapper for ndnrtc-client for quick&easy NDN video streaming"
   homepage "https://github.com/remap/ndnrtc-stream"
   url "https://github.com/remap/ndnrtc-stream/archive/v0.0.1.tar.gz"
-  sha256 "15b51d991752643c99be1437a3c08f80661693df6d01a6e9ac16066da6eed99a"
+  sha256 "9c3c544bfb95762a7d04ce048f206d4d8b3c9a6d7bc5c6a12b2e0888d766fdaf"
 
   depends_on "python3"
 
