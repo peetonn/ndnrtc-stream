@@ -11,6 +11,7 @@ class Base(object):
 
     def __init__(self, options, *args, **kwargs):
         global logger
+        checkNfdIsRunning()
         self.options = options
         self.args = args
         self.kwargs = kwargs

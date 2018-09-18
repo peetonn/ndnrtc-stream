@@ -84,6 +84,13 @@ ch.setFormatter(CustomFormatter())
 logger.propagate = False
 logger.handlers = [ch]
 
+def checkNfdIsRunning():
+    proc = popen(['nfd-status'], stdout=PIPE)
+    out = proc.communicate()[0]
+    if proc.returncode != 0:
+        logger.error('apparently, NFD is not running. please start NFD to use this app')
+        sys.exit(1)
+
 def startFfplay(previewPipe, w, h, overlayFile=''):
     proc = popen([ffplayCmd, '-f', 'rawvideo', 
                     # '-vf', 'drawtext=text=\'%{localtime} '+str+'\': x=10: y=10: fontcolor=white: fontsize=20: box=1: boxcolor=0x00000000@1',
