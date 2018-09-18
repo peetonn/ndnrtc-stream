@@ -19,6 +19,8 @@ logger.handlers = [ch]
 sampleConfig= \
 u'general = {\n\
         log_path="";\n\
+        log_level = "default";\n\
+        log_file = "client.log";\n\
     };\n\
 consume = {\n\
     basic = {\n\
@@ -62,12 +64,16 @@ class Fetch(Base):
         self.childrenProcs = [self.ndnrtcClientProc, self.ffplayProc]
         self.startStatWatch()
 
+        dumpOutput(self.ffplayProc.stdout, os.path.join(self.runDir, 'ffplay.out'))
+        dumpOutput(self.ffplayProc.stderr, os.path.join(self.runDir, 'ffplay.err'))
+        dumpOutput(self.ndnrtcClientProc.stderr, os.path.join(self.runDir, 'ndnrtc-client.err'))
+
         logger.info('fetching from %s'%self.basePrefix)
-        # proc = self.ndnrtcClientProc
-        proc = self.ffplayProc
+        proc = self.ndnrtcClientProc
+        # proc = self.ffplayProc
         try:
             while proc.poll() == None:
-                line = proc.stderr.readline()
+                line = proc.stdout.readline()
                 if self.options['--verbose']:
                     sys.stdout.write(line)
         except:
@@ -84,6 +90,8 @@ class Fetch(Base):
         else:
             self.config = libconf.loads(sampleConfig)
             self.config['general']['log_path'] = self.runDir
+            if self.options['--verbose']:
+                self.config['general']['log_level'] = 'all' 
             streamPrefix = self.options['<stream_prefix>']
             self.basePrefix = streamPrefix if streamPrefix.endswith(utils.ndnrtcClientInstanceName) else os.path.join(streamPrefix, utils.ndnrtcClientInstanceName)
             self.config['consume']['streams'][0]['base_prefix'] = self.basePrefix

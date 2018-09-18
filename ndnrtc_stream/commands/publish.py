@@ -18,6 +18,8 @@ logger.handlers = [ch]
 sampleConfig = \
 u'general = {\n\
         log_path = "";\n\
+        log_level = "default";\n\
+        log_file = "client.log";\n\
     };\n\
 produce = {\n\
     stat_gathering = ({\n\
@@ -60,14 +62,21 @@ class Publish(Base):
         self.ndnrtcClientProc = startNdnrtcClient(self.configFile, self.signingIdentity, self.policyFile)
         self.childrenProcs = [self.ffplayProc, self.ffmpegProc, self.ndnrtcClientProc]
         
+        dumpOutput(self.ffmpegProc.stdout, os.path.join(self.runDir, 'ffmpeg.out'))
+        dumpOutput(self.ffmpegProc.stderr, os.path.join(self.runDir, 'ffmpeg.err'))
+        dumpOutput(self.ffplayProc.stdout, os.path.join(self.runDir, 'ffplay.out'))
+        dumpOutput(self.ffplayProc.stderr, os.path.join(self.runDir, 'ffplay.err'))
+        # dumpOutput(self.ndnrtcClientProc.stdout, os.path.join(self.runDir, 'ndnrtc-client.out'))
+        dumpOutput(self.ndnrtcClientProc.stderr, os.path.join(self.runDir, 'ndnrtc-client.err'))
+
         self.startStatWatch()
 
-        # proc = self.ndnrtcClientProc
+        proc = self.ndnrtcClientProc
         # proc = self.ffmpegProc
-        proc = self.ffplayProc
+        # proc = self.ffplayProc
         try:
             while proc.poll() == None:
-                line = proc.stderr.readline()
+                line = proc.stdout.readline()
                 if self.options['--verbose']:
                     sys.stdout.write(line)
         except:
@@ -99,6 +108,8 @@ class Publish(Base):
         else:
             self.config = libconf.loads(sampleConfig)
             self.config['general']['log_path'] = self.runDir
+            if self.options['--verbose']:
+                self.config['general']['log_level'] = 'all' 
             self.config['produce']['streams'][0]['source']['name'] = self.sourcePipe
             # customize other things, if options are available
             if self.options['--video_size']:

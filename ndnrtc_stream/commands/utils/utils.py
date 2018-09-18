@@ -266,3 +266,16 @@ def open_atomic(filepath, *args, **kwargs):
                     os.fsync(file.fileno())
         os.rename(tmppath, filepath)
 
+def dumpOutput(out, filename):
+    def dump(out, filename):
+        with io.open(filename, 'w') as f:
+            while True:
+                line = out.readline()
+                f.write(unicode(line))
+                f.flush()
+            logger.debug('closing %s'%filename)
+            out.close()
+    t = Thread(target = dump, args = (out, filename))
+    t.daemon = True
+    t.start()
+
