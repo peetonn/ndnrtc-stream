@@ -17,7 +17,18 @@ logger.propagate = False
 logger.handlers = [ch]
 
 sampleConfig= \
-u'consume = {\n\
+u'general = {\n\
+        log_path="";\n\
+    };\n\
+consume = {\n\
+    basic = {\n\
+        stat_gathering = ({\n\
+            name = "'+statFileId+'";\n\
+            statistics= ("isent", "segNumRcvd", "appNacks", "nacks", "timeouts", "rtxNum",\
+            "bytesRcvd", "rawBytesRcvd", "lambdaD", "drdEst", "jitterPlay",\
+            "framesReq", "framesPlayed", "framesInc", "skipNoKey");\n\
+        });\n\
+    };\n\
     streams = ({\n\
         type = "video";\n\
         base_prefix = "";\n\
@@ -31,6 +42,10 @@ u'consume = {\n\
     });\n\
 };\n'
 
+statCaptions = {'isent': 'Interests sent', 'segNumRcvd': 'Segments Rcvd', 'appNacks': 'App Nacks', 'nacks': 'Netw Nacks', 'timeouts':'Timeouts', 'rtxNum':'RTX',
+                'bytesRcvd': 'Bytes Rcvd', 'rawBytesRcvd':'Bytes Rcvd (raw)', 'lambdaD': 'Pipeline', 'drdEst': 'DRD (ms)', 'jitterPlay':'Buffer size (ms)',
+                'framesReq': 'F Requested', 'framesPlayed': 'F Played', 'framesInc': 'F Incomplete', 'skipNoKey': 'F Skipped'}
+
 class Fetch(Base):
     def __init__(self, options, *args, **kwargs):
         Base.__init__(self, options, args, kwargs)
@@ -40,12 +55,13 @@ class Fetch(Base):
         self.setupSigningIdentity()
         self.setupVerificationPolicy()
         self.setupPreviewPipe()
+        self.createOverlayFile()
 
-        self.ffplayProc = startFfplay(self.previewPipe, self.videoWidth, self.videoHeight,
-                                        str=' fetching %s'%self.basePrefix)
+        self.ffplayProc = startFfplay(self.previewPipe, self.videoWidth, self.videoHeight, self.overlayFile)
         self.ndnrtcClientProc = startNdnrtcClient(self.configFile, self.signingIdentity, self.policyFile)
         self.childrenProcs = [self.ndnrtcClientProc, self.ffplayProc]
-        
+        self.startStatWatch()
+
         logger.info('fetching from %s'%self.basePrefix)
         # proc = self.ndnrtcClientProc
         proc = self.ffplayProc
@@ -58,6 +74,7 @@ class Fetch(Base):
             pass
 
         self.stopChildren()
+        self.stopStatWatch()
         logger.info("completed")
 
     def setupConsumerConfig(self):
@@ -66,6 +83,7 @@ class Fetch(Base):
             self.config = libconf.load(self.options['--config_file'])
         else:
             self.config = libconf.loads(sampleConfig)
+            self.config['general']['log_path'] = self.runDir
             streamPrefix = self.options['<stream_prefix>']
             self.basePrefix = streamPrefix if streamPrefix.endswith(utils.ndnrtcClientInstanceName) else os.path.join(streamPrefix, utils.ndnrtcClientInstanceName)
             self.config['consume']['streams'][0]['base_prefix'] = self.basePrefix
@@ -134,3 +152,37 @@ class Fetch(Base):
         self.previewPipe = '%s.%dx%d'%(self.sinkPipe, self.videoWidth, self.videoHeight)
         if not os.path.exists(self.previewPipe):
             os.mkfifo(self.previewPipe)
+
+    def createOverlayFile(self):
+        self.overlayFile = os.path.join(self.runDir, 'overlay.txt')
+        with io.open(self.overlayFile, 'w') as f:
+            f.write(u'-')
+
+    def startStatWatch(self):
+        global statFileId, streamName
+        if not self.options['--config_file']:
+            self.statFile = "%s%s-%s.stat"%(statFileId, self.basePrefix.replace('/','-'), streamName)
+            filePath = os.path.join(self.runDir, self.statFile)
+            
+            def onNewLine(statLine):
+                # logger.debug('new line %s and the stats are %s'%(statLine))
+                overlay = "Fetching %s"%self.basePrefix
+                stats = statLine.split('\t')
+                if len(stats) > 1:
+                    idx = 1
+                    for statKey in self.config['consume']['basic']['stat_gathering'][0]['statistics']:
+                        try:
+                            caption = statCaptions[statKey]
+                            overlay += "\n%-30s %10s"%(caption, stats[idx])
+                            idx += 1
+                        except:
+                            pass
+                with open_atomic(self.overlayFile, 'w') as f:
+                    f.write(overlay)
+
+            self.statTail = Tail(filePath, onNewLine)
+            self.statTail.start()
+
+    def stopStatWatch(self):
+        if self.statTail:
+            self.statTail.stop()

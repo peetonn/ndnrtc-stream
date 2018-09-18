@@ -12,7 +12,8 @@ ndnrtcClientCmd = "ndnrtc-client"
 ndnsecCmd = "ndnsec"
 ndnrtcClientInstanceName = 'rtc-stream'
 defaultRunTime = 10000
-overlayTxtFile = 'overlay.txt'
+streamName = "camera"
+statFileId = "overlay-stats"
 
 samplePolicyAny = \
 u'validator\n\
@@ -202,7 +203,8 @@ class Tail(object):
                             self.onNewLine(line)
         except (OSError, IOError) as e:
             time.sleep(0.2)
-            self.run()
+            if self.running:
+                self.run()
 
 @contextmanager
 def tempfile(suffix='', dir=None):

@@ -15,9 +15,6 @@ ch.setFormatter(CustomFormatter())
 logger.propagate = False
 logger.handlers = [ch]
 
-streamName = "camera"
-statFileId = "overlay-stats"
-
 sampleConfig = \
 u'general = {\n\
         log_path = "";\n\
