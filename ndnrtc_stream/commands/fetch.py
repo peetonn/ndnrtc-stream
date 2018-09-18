@@ -28,7 +28,8 @@ consume = {\n\
             name = "'+statFileId+'";\n\
             statistics= ("isent", "segNumRcvd", "appNacks", "nacks", "timeouts", "rtxNum",\
             "bytesRcvd", "rawBytesRcvd", "lambdaD", "drdEst", "jitterPlay",\
-            "framesReq", "framesPlayed", "framesInc", "skipNoKey");\n\
+            "framesReq", "framesPlayed", "framesInc", "skipNoKey",\
+            "verifySuccess", "verifyFailure");\n\
         });\n\
     };\n\
     streams = ({\n\
@@ -47,7 +48,8 @@ consume = {\n\
 statCaptions = {'isent': 'Interests/sec', 'segNumRcvd': 'Segments/sec', 'appNacks': 'App Nacks', 'nacks': 'Netw Nacks', 
                 'timeouts':'Timeouts', 'rtxNum':'Retransmissions', 'bytesRcvd': 'Payload Kbps', 'rawBytesRcvd':'Total Kbps', 
                 'lambdaD': 'Min Pipeline', 'drdEst': 'DRD (ms)', 'jitterPlay':'Buffer size (ms)', 'framesReq': 'Frames Requested', 
-                'framesPlayed': 'Frames Played', 'framesInc': 'Frames Incomplete', 'skipNoKey': 'Frames Skipped'}
+                'framesPlayed': 'Frames Played', 'framesInc': 'Frames Incomplete', 'skipNoKey': 'Frames Skipped',
+                'verifySuccess': 'Frames Verified', 'verifyFailure': 'Verify Failures' }
 derivativeStats = ['isent', 'segNumRcvd', 'bytesRcvd', 'rawBytesRcvd']
 
 class Fetch(Base):
