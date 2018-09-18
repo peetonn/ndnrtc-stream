@@ -24,7 +24,7 @@ u'general = {\n\
 produce = {\n\
     stat_gathering = ({\n\
         name = "'+statFileId+'";\n\
-        statistics = ("framesCaptured", "framesPub", "framesDrop", "segPub", "prodRate", "irecvd");\n\
+        statistics = ("framesCaptured", "framesPub", "framesDrop", "prodRate", "segPub");\n\
     });\n\
     streams = ({\n\
         type = "video";\n\
@@ -40,8 +40,8 @@ produce = {\n\
     });\n\
 };\n'
 
-statCaptions = {'framesCaptured': 'F Captured', 'framesPub':'F Published', 'framesDrop':'F Dropped', 
-                'segPub':'Seg Published', 'prodRate':'Publish Rate', 'irecvd':'Interests Recvd'}
+statCaptions = {'framesCaptured': 'Frames Captured', 'framesPub':'Frames Published', 'framesDrop':'Frames Dropped', 
+                'segPub':'Seg Published', 'prodRate':'Frame Publish Rate', 'irecvd':'Interests Recvd'}
 
 class Publish(Base):
     def __init__(self, options, *args, **kwargs):
@@ -180,14 +180,18 @@ class Publish(Base):
             
             def onNewLine(statLine):
                 # logger.debug('new line %s and the stats are %s'%(statLine))
-                overlay = "Publishing %s"%self.ndnrtcClientPrefix
+                overlay = "Publishing %s\n"%self.ndnrtcClientPrefix
                 stats = statLine.split('\t')
                 if len(stats) > 1:
                     idx = 1
                     for statKey in self.config['produce']['stat_gathering'][0]['statistics']:
                         try:
                             caption = statCaptions[statKey]
-                            overlay += "\n%-30s %10s"%(caption, stats[idx])
+                            value = float(stats[idx])
+                            if value - int(value) > 0:
+                                overlay += "\n%20s %-10.2f"%(caption, value)
+                            else:
+                                overlay += "\n%20s %-10d"%(caption, int(value))
                             idx += 1
                         except:
                             pass

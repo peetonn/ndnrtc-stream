@@ -87,7 +87,7 @@ logger.handlers = [ch]
 def startFfplay(previewPipe, w, h, overlayFile=''):
     proc = popen([ffplayCmd, '-f', 'rawvideo', 
                     # '-vf', 'drawtext=text=\'%{localtime} '+str+'\': x=10: y=10: fontcolor=white: fontsize=20: box=1: boxcolor=0x00000000@1',
-                    '-vf', 'drawtext=textfile='+overlayFile+':reload=1: x=10: y=10: fontcolor=white: fontsize=20: box=1: boxcolor=0x00000000@1',
+                    '-vf', 'drawtext=textfile='+overlayFile+':reload=1: x=10: y=10: fontcolor=white: fontfile=/System/Library/Fonts/Courier.dfont: fontsize=20: box=1: boxcolor=0x00000000@1',
                     '-pixel_format', '0rgb',
                     '-video_size', '%dx%d'%(w,h),
                     '-i', previewPipe],

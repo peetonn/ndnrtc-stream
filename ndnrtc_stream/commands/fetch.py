@@ -44,9 +44,11 @@ consume = {\n\
     });\n\
 };\n'
 
-statCaptions = {'isent': 'Interests sent', 'segNumRcvd': 'Segments Rcvd', 'appNacks': 'App Nacks', 'nacks': 'Netw Nacks', 'timeouts':'Timeouts', 'rtxNum':'RTX',
-                'bytesRcvd': 'Bytes Rcvd', 'rawBytesRcvd':'Bytes Rcvd (raw)', 'lambdaD': 'Pipeline', 'drdEst': 'DRD (ms)', 'jitterPlay':'Buffer size (ms)',
-                'framesReq': 'F Requested', 'framesPlayed': 'F Played', 'framesInc': 'F Incomplete', 'skipNoKey': 'F Skipped'}
+statCaptions = {'isent': 'Interests/sec', 'segNumRcvd': 'Segments/sec', 'appNacks': 'App Nacks', 'nacks': 'Netw Nacks', 
+                'timeouts':'Timeouts', 'rtxNum':'Retransmissions', 'bytesRcvd': 'Payload Kbps', 'rawBytesRcvd':'Total Kbps', 
+                'lambdaD': 'Min Pipeline', 'drdEst': 'DRD (ms)', 'jitterPlay':'Buffer size (ms)', 'framesReq': 'Frames Requested', 
+                'framesPlayed': 'Frames Played', 'framesInc': 'Frames Incomplete', 'skipNoKey': 'Frames Skipped'}
+derivativeStats = ['isent', 'segNumRcvd', 'bytesRcvd', 'rawBytesRcvd']
 
 class Fetch(Base):
     def __init__(self, options, *args, **kwargs):
@@ -167,23 +169,49 @@ class Fetch(Base):
             f.write(u'-')
 
     def startStatWatch(self):
-        global statFileId, streamName
+        global statFileId, streamName, derivativeStats
         if not self.options['--config_file']:
             self.statFile = "%s%s-%s.stat"%(statFileId, self.basePrefix.replace('/','-'), streamName)
             filePath = os.path.join(self.runDir, self.statFile)
             
+            derivatives = {}
+            for s in derivativeStats:
+                derivatives[s] = [time.time(), None]
             def onNewLine(statLine):
-                # logger.debug('new line %s and the stats are %s'%(statLine))
-                overlay = "Fetching %s"%self.basePrefix
+                now = time.time()
+                overlay = "Fetching %s\n"%self.basePrefix
                 stats = statLine.split('\t')
                 if len(stats) > 1:
                     idx = 1
                     for statKey in self.config['consume']['basic']['stat_gathering'][0]['statistics']:
                         try:
+                            update = True
                             caption = statCaptions[statKey]
-                            overlay += "\n%-30s %10s"%(caption, stats[idx])
+                            value = float(stats[idx])
+                            if statKey in derivativeStats: # calculate derivative for this stat
+                                dT = now - derivatives[statKey][0]
+                                lastValue = derivatives[statKey][1]
+                                # if dT >= 1:
+                                derivatives[statKey][0] = now
+                                derivatives[statKey][1] = value
+                                if lastValue and lastValue < value:
+                                    dV = value - lastValue
+                                    d = dV / dT
+                                    value = d
+                                    # just a hack for bytes counters to convert derivative
+                                    # into Kbps
+                                    if 'bytes' in statKey.lower(): 
+                                        value = value * 8. / 1024.
+                                else:
+                                    update = False
+                            if update:
+                                if value - int(value) > 0:
+                                    overlay += "\n%20s %-10.2f"%(caption, value)
+                                else:
+                                    overlay += "\n%20s %-10d"%(caption, int(value))
                             idx += 1
                         except:
+                            logger.debug(sys.exc_info())
                             pass
                 with open_atomic(self.overlayFile, 'w') as f:
                     f.write(overlay)
