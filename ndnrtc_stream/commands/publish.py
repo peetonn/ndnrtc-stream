@@ -15,11 +15,21 @@ ch.setFormatter(CustomFormatter())
 logger.propagate = False
 logger.handlers = [ch]
 
+streamName = "camera"
+statFileId = "overlay-stats"
+
 sampleConfig = \
-u'produce = {\n\
+u'general = {\n\
+        log_path = "";\n\
+    };\n\
+produce = {\n\
+    stat_gathering = ({\n\
+        name = "'+statFileId+'";\n\
+        statistics = ("framesCaptured", "framesPub", "framesDrop", "segPub", "prodRate", "irecvd");\n\
+    });\n\
     streams = ({\n\
         type = "video";\n\
-        name = "camera";\n\
+        name = "'+streamName+'";\n\
         sync = "sound";\n\
         source = {\n\
             name = "/tmp/camera";\n\
@@ -31,6 +41,9 @@ u'produce = {\n\
     });\n\
 };\n'
 
+statCaptions = {'framesCaptured': 'F Captured', 'framesPub':'F Published', 'framesDrop':'F Dropped', 
+                'segPub':'Seg Published', 'prodRate':'Publish Rate', 'irecvd':'Interests Recvd'}
+
 class Publish(Base):
     def __init__(self, options, *args, **kwargs):
         Base.__init__(self, options, args, kwargs)
@@ -39,15 +52,18 @@ class Publish(Base):
         self.setupVideoSize()
         self.createSourcePipe()
         self.createPreviewPipe()
+        self.createOverlayFile()
         self.setupProducerConfig()
         self.setupSigningIdentity()
         self.setupVerificationPolicy()
 
         self.ffplayProc = startFfplay(self.previewPipe, self.videoWidth, self.videoHeight, 
-                                        str=' publishing %s'%self.ndnrtcClientPrefix)
+                                        overlayFile=self.overlayFile)
         self.ffmpegProc = startFfmpeg(self.sourcePipe, self.previewPipe, self.videoWidth, self.videoHeight)
         self.ndnrtcClientProc = startNdnrtcClient(self.configFile, self.signingIdentity, self.policyFile)
         self.childrenProcs = [self.ffplayProc, self.ffmpegProc, self.ndnrtcClientProc]
+        
+        self.startStatWatch()
 
         # proc = self.ndnrtcClientProc
         # proc = self.ffmpegProc
@@ -61,11 +77,12 @@ class Publish(Base):
             pass
 
         self.stopChildren()
+        self.stopStatWatch()
         logger.info("completed")
 
     def createSourcePipe(self):
         self.sourcePipe = os.path.join(self.runDir, 'camera')
-        os.mkfifo(self.sourcePipe, 0644)
+        os.mkfifo(self.sourcePipe)
         logger.debug("camera source pipe: %s"%self.sourcePipe)
 
     def createPreviewPipe(self):
@@ -73,12 +90,18 @@ class Publish(Base):
         os.mkfifo(self.previewPipe)
         logger.debug("camera preview pipe: %s"%self.previewPipe)
 
+    def createOverlayFile(self):
+        self.overlayFile = os.path.join(self.runDir, 'overlay.txt')
+        with io.open(self.overlayFile, 'w') as f:
+            f.write(u'-')
+
     def setupProducerConfig(self):
         global sampleConfig
         if self.options['--config_file']:
             self.config = libconf.load(self.options['--config_file'])
         else:
             self.config = libconf.loads(sampleConfig)
+            self.config['general']['log_path'] = self.runDir
             self.config['produce']['streams'][0]['source']['name'] = self.sourcePipe
             # customize other things, if options are available
             if self.options['--video_size']:
@@ -92,8 +115,8 @@ class Publish(Base):
         logger.debug("saved config to %s"%self.configFile)
 
     def setupSigningIdentity(self):
-        if self.options['--identity']:
-            identity = self.options['--identity'].strip()
+        if self.options['--identity'] or self.options['<prefix>']:
+            identity = self.options['--identity'].strip() if self.options['--identity'] else self.options['<prefix>'].strip()
             res = None
             if not ndnsec_checkIdentity(identity):
                 res = ndnsec_createIdentity(identity)
@@ -139,6 +162,37 @@ class Publish(Base):
         with io.open(self.policyFile, 'w') as f:
             f.write(utils.samplePolicyAny)
         logger.debug('setup policy file at %s'%self.policyFile)
+
+    def startStatWatch(self):
+        global statFileId, streamName
+        if not self.options['--config_file']:
+            self.statFile = "%s%s-%s-%s.stat"%(statFileId, self.signingIdentity.replace('/','-'), utils.ndnrtcClientInstanceName, streamName)
+            logger.debug('overlay stats are here %s'%self.statFile)
+            filePath = os.path.join(self.runDir, self.statFile)
+            
+            def onNewLine(statLine):
+                # logger.debug('new line %s and the stats are %s'%(statLine))
+                overlay = "Publishing %s"%self.ndnrtcClientPrefix
+                stats = statLine.split('\t')
+                if len(stats) > 1:
+                    idx = 1
+                    for statKey in self.config['produce']['stat_gathering'][0]['statistics']:
+                        try:
+                            caption = statCaptions[statKey]
+                            overlay += "\n%-30s %10s"%(caption, stats[idx])
+                            idx += 1
+                        except:
+                            pass
+                with open_atomic(self.overlayFile, 'w') as f:
+                    f.write(overlay)
+
+            self.statTail = Tail(filePath, onNewLine)
+            self.statTail.start()
+
+    def stopStatWatch(self):
+        if self.statTail:
+            self.statTail.stop()
+
 
 
 

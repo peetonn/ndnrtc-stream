@@ -1,7 +1,10 @@
 """ Utils """
 
-import logging, sys
+import io, logging, os, sys, threading, time
 from subprocess import PIPE, Popen as popen
+from threading import Thread
+import tempfile as tmp
+from contextlib import contextmanager
 
 ffmpegCmd = "ffmpeg"
 ffplayCmd = "ffplay"
@@ -9,6 +12,7 @@ ndnrtcClientCmd = "ndnrtc-client"
 ndnsecCmd = "ndnsec"
 ndnrtcClientInstanceName = 'rtc-stream'
 defaultRunTime = 10000
+overlayTxtFile = 'overlay.txt'
 
 samplePolicyAny = \
 u'validator\n\
@@ -79,9 +83,10 @@ ch.setFormatter(CustomFormatter())
 logger.propagate = False
 logger.handlers = [ch]
 
-def startFfplay(previewPipe, w, h, str=''):
+def startFfplay(previewPipe, w, h, overlayFile=''):
     proc = popen([ffplayCmd, '-f', 'rawvideo', 
-                    '-vf', 'drawtext=text=\'%{localtime} '+str+'\': x=10: y=10: fontcolor=white: fontsize=20: box=1: boxcolor=0x00000000@1',
+                    # '-vf', 'drawtext=text=\'%{localtime} '+str+'\': x=10: y=10: fontcolor=white: fontsize=20: box=1: boxcolor=0x00000000@1',
+                    '-vf', 'drawtext=textfile='+overlayFile+':reload=1: x=10: y=10: fontcolor=white: fontsize=20: box=1: boxcolor=0x00000000@1',
                     '-pixel_format', '0rgb',
                     '-video_size', '%dx%d'%(w,h),
                     '-i', previewPipe],
@@ -112,7 +117,7 @@ def startFfmpeg(cameraPipe, previewPipe, w,h):
 
 def startNdnrtcClient(configFile, signingIdentity, verificationPolicy):
     global defaultRunTime
-    proc = popen([ndnrtcClientCmd, '-c', configFile,
+    proc = popen([ndnrtcClientCmd, '-v', '-c', configFile,
                     '-s', signingIdentity,
                     '-p', verificationPolicy,
                     '-t', str(defaultRunTime),
@@ -167,4 +172,95 @@ def ndnsec_dumpCert(identity):
     if ndnsecProc.returncode == 0:
         return output
     return None
+
+class Tail(object):
+    running = False
+
+    def __init__(self, fileName, onNewLine):
+        self.fileName = fileName
+        self.onNewLine = onNewLine
+        self.thread = Thread(target = self.run)
+
+    def start(self):
+        self.running = True
+        self.thread.start()
+
+    def stop(self):
+        self.running = False
+        self.thread.join()
+
+    def run(self):
+        try:
+            with io.open(self.fileName, 'r') as f:
+                f.seek(0, 2) # seek to the end of file
+                while self.running:
+                    line = f.readline()
+                    if line == '': # empty line
+                        time.sleep(0.05)
+                    else:
+                        if self.onNewLine:
+                            self.onNewLine(line)
+        except (OSError, IOError) as e:
+            time.sleep(0.2)
+            self.run()
+
+@contextmanager
+def tempfile(suffix='', dir=None):
+    """ Context for temporary file.
+
+    Will find a free temporary filename upon entering
+    and will try to delete the file on leaving, even in case of an exception.
+
+    Parameters
+    ----------
+    suffix : string
+        optional file suffix
+    dir : string
+        optional directory to save temporary file in
+    """
+
+    tf = tmp.NamedTemporaryFile(delete=False, suffix=suffix, dir=dir)
+    tf.file.close()
+    try:
+        yield tf.name
+    finally:
+        try:
+            os.remove(tf.name)
+        except OSError as e:
+            if e.errno == 2:
+                pass
+            else:
+                raise
+
+@contextmanager
+def open_atomic(filepath, *args, **kwargs):
+    """ Open temporary file object that atomically moves to destination upon
+    exiting.
+
+    Allows reading and writing to and from the same filename.
+
+    The file will not be moved to destination in case of an exception.
+
+    Parameters
+    ----------
+    filepath : string
+        the file path to be opened
+    fsync : bool
+        whether to force write the file to disk
+    *args : mixed
+        Any valid arguments for :code:`open`
+    **kwargs : mixed
+        Any valid keyword arguments for :code:`open`
+    """
+    fsync = kwargs.get('fsync', False)
+
+    with tempfile(dir=os.path.dirname(os.path.abspath(filepath))) as tmppath:
+        with open(tmppath, *args, **kwargs) as file:
+            try:
+                yield file
+            finally:
+                if fsync:
+                    file.flush()
+                    os.fsync(file.fileno())
+        os.rename(tmppath, filepath)
 
