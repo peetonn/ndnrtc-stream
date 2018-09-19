@@ -8,6 +8,7 @@ import tempfile
 
 from .base import *
 from json import dumps
+from shutil import copyfile
 from ndnrtc_stream.commands.utils import *
 
 logger = logging.getLogger(__name__)
@@ -124,22 +125,25 @@ class Fetch(Base):
             self.policyFile = self.options['--trust_schema']
         else:
             # will compose verification file based on following rules:
+            # - if there's a cert file file provided, use it as trust anchor
             # - if there's an identity that is a prefix of provided stream prefix, 
             #       then will use this identity as trust anchor
             # - if there are no such identities, will use "any" trust anchor
-            allIdentities = ndnsec_getAllIdentities()
-            prefixes = [i for i in allIdentities if self.options['<stream_prefix>'].startswith(i)]
-            if allIdentities and len(prefixes) > 0:
-                identity = prefixes[0]
-                logger.info('using identity %s as a trust anchor'%identity)
-                self.saveCert(identity)
-                policy = utils.samplePolicy
-                policy = policy.replace('CERT_FILENAME', self.certFile)
-                with io.open(self.policyFile, 'w') as f:
-                    f.write(policy)
-            else: # use "any"
-                with io.open(self.policyFile, 'w') as f:
-                    f.write(utils.samplePolicyAny)
+            if self.options['<cert_file>']:
+                self.certFile = os.path.join(self.runDir, 'id.cert')
+                copyfile(self.options['<cert_file>'], self.certFile)
+                self.savePolicyFile()
+            else:
+                allIdentities = ndnsec_getAllIdentities()
+                prefixes = [i for i in allIdentities if self.options['<stream_prefix>'].startswith(i)]
+                if allIdentities and len(prefixes) > 0:
+                    identity = prefixes[0]
+                    logger.info('using identity %s as a trust anchor'%identity)
+                    self.saveCert(identity)
+                    self.savePolicyFile()
+                else: # use "any"
+                    with io.open(self.policyFile, 'w') as f:
+                        f.write(utils.samplePolicyAny)
             logger.debug('setup policy file at %s'%self.policyFile)
 
     def saveCert(self, identity):
@@ -150,6 +154,12 @@ class Fetch(Base):
             f.write(unicode(cert))
         logger.debug('stored identity cert at %s'%self.certFile)
     
+    def savePolicyFile(self):
+        policy = utils.samplePolicy
+        policy = policy.replace('CERT_FILENAME', self.certFile)
+        with io.open(self.policyFile, 'w') as f:
+            f.write(policy)
+
     def setupPreviewPipe(self):
         if self.options['--video_size']:
             resolution = self.options['--video_size'].split('x')

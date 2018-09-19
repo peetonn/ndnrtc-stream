@@ -3,17 +3,18 @@ ndnrtc-stream
 
 Usage:
   ndnrtc-stream publish [<prefix> -i <identity> -s <video_size> -b <bitrate> -c <config_file> -v <verbose>]
-  ndnrtc-stream fetch <stream_prefix> [-t <trust_schema> -c <config_file> -v <verbose>]
+  ndnrtc-stream fetch <stream_prefix> [-t <trust_schema> -c <config_file> -a <cert_file> -v <verbose>]
   ndnrtc-stream -h | --help
   ndnrtc-stream --version
 
 Options:
   -h --help                         Show this screen.
   --version                         Show version.
-  -i,--identity=<ndn_identity>      NDN identity used to sign data (default identitiy is used if ommited).
-  -s,--video_size=<video_size>      Video stream resolution in the form <width>x<height>.
+  -a, --cert_file                   Certificate which will be used as a trust anchor for data verification.
   -b,--bitrate=<bitrate>            Video stream target encoding bitrate in Kbps.
   -c,--config_file=<config_file>    ndnrtc-client config file.
+  -i,--identity=<ndn_identity>      NDN identity used to sign data (default identitiy is used if ommited).
+  -s,--video_size=<video_size>      Video stream resolution in the form <width>x<height>.
   -t,--trust_schema=<trust_schema>  Trust schema verification policy.
   -v,--verbose                      Verbose output.
 
