@@ -60,6 +60,6 @@ If you want to fetch video published bby `ndnrtc-stream` from remote machine, ma
 
 ```
 nfdc face create udp://<remote-machine-ip-address>
-nfdc route add <face-id> /ndnrtc
+nfdc route add ndn://ndnrtc <face-id>
 ndnrtc-stream fetch /ndnrtc/rtc-stream
 ```
