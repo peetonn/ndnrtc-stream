@@ -191,7 +191,7 @@ class Fetch(Base):
                 derivatives[s] = [time.time(), None]
             def onNewLine(statLine):
                 now = time.time()
-                overlay = "Fetching %s\n"%self.basePrefix
+                overlay = "Fetching %s\n"%self.basePrefix.replace('%', '\%')
                 stats = statLine.split('\t')
                 if len(stats) > 1:
                     idx = 1

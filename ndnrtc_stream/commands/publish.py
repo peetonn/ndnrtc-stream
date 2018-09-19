@@ -175,12 +175,12 @@ class Publish(Base):
         global statFileId, streamName
         if not self.options['--config_file']:
             self.statFile = "%s%s-%s-%s.stat"%(statFileId, self.signingIdentity.replace('/','-'), utils.ndnrtcClientInstanceName, streamName)
-            logger.debug('overlay stats are here %s'%self.statFile)
             filePath = os.path.join(self.runDir, self.statFile)
+            logger.debug('overlay stats are here %s'%filePath)
             
             def onNewLine(statLine):
-                # logger.debug('new line %s and the stats are %s'%(statLine))
-                overlay = "Publishing %s\n"%self.ndnrtcClientPrefix
+                # logger.debug('new line %s'%(statLine))
+                overlay = "Publishing %s\n"%self.ndnrtcClientPrefix.replace('%', '\%')
                 stats = statLine.split('\t')
                 if len(stats) > 1:
                     idx = 1
@@ -194,7 +194,9 @@ class Publish(Base):
                                 overlay += "\n%20s %-10d"%(caption, int(value))
                             idx += 1
                         except:
+                            logger.debug(sys.exc_info())
                             pass
+                # logger.debug('overlay %s to %s'%(overlay, self.overlayFile))
                 with open_atomic(self.overlayFile, 'w') as f:
                     f.write(overlay)
 
