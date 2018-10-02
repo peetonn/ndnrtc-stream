@@ -34,7 +34,7 @@ brew install ndnrtc ndnrtc-stream
 
 ## Use
 
-1. Configure [NFD security]()
+1. Configure [NFD security](http://named-data.net/doc/NFD/current/FAQ.html#how-to-configure-nfd-security)
 2. Generate new self-signed identity (or use existing one) which will be used for signing data:
 
 ```
