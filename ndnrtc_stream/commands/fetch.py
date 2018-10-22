@@ -36,8 +36,8 @@ consume = {\n\
     streams = ({\n\
         type = "video";\n\
         base_prefix = "";\n\
-        name = "camera";\n\
-        thread_to_fetch = "t";\n\
+        name = "'+streamName+'";\n\
+        thread_to_fetch = "'+threadName+'";\n\
         sink = {\n\
             name = "";\n\
             type = "pipe";\n\
@@ -89,7 +89,7 @@ class Fetch(Base):
         logger.info("completed")
 
     def setupConsumerConfig(self):
-        global sampleConfig
+        global sampleConfig, streamName
         if self.options['--config_file']:
             self.config = libconf.load(self.options['--config_file'])
         else:
@@ -98,10 +98,18 @@ class Fetch(Base):
             if self.options['--verbose']:
                 self.config['general']['log_level'] = 'all' 
             streamPrefix = self.options['<stream_prefix>']
+            if self.options['--instance_name']:
+                utils.ndnrtcClientInstanceName = self.options['--instance_name']
             self.basePrefix = streamPrefix if streamPrefix.endswith(utils.ndnrtcClientInstanceName) else os.path.join(streamPrefix, utils.ndnrtcClientInstanceName)
             self.config['consume']['streams'][0]['base_prefix'] = self.basePrefix
             self.sinkPipe = os.path.join(self.runDir, 'sink')
             self.config['consume']['streams'][0]['sink']['name'] = self.sinkPipe
+            if self.options['--stream_name']:
+                streamName = self.options['--stream_name']
+                self.config['consume']['streams'][0]['name'] = self.options['--stream_name']
+            if self.options['--thread_name']:
+                self.config['consume']['streams'][0]['thread_to_fetch'] = self.options['--thread_name']
+
         self.configFile = os.path.join(self.runDir, 'consumer.cfg')
         with io.open(self.configFile, mode="w") as f:
             libconf.dump(self.config, f)
@@ -184,6 +192,7 @@ class Fetch(Base):
         global statFileId, streamName, derivativeStats
         if not self.options['--config_file']:
             self.statFile = "%s%s-%s.stat"%(statFileId, self.basePrefix.replace('/','-'), streamName)
+            print("WATCHING STAT FILE "+self.statFile)
             filePath = os.path.join(self.runDir, self.statFile)
             
             derivatives = {}

@@ -35,7 +35,7 @@ produce = {\n\
             type = "pipe";\n\
         };\n\
         threads = ({\n\
-            name = "t";\n\
+            name = "'+threadName+'";\n\
         });\n\
     });\n\
 };\n'
@@ -102,7 +102,7 @@ class Publish(Base):
             f.write(u'-')
 
     def setupProducerConfig(self):
-        global sampleConfig
+        global sampleConfig, streamName
         if self.options['--config_file']:
             self.config = libconf.load(self.options['--config_file'])
         else:
@@ -113,9 +113,17 @@ class Publish(Base):
             self.config['produce']['streams'][0]['source']['name'] = self.sourcePipe
             # customize other things, if options are available
             if self.options['--video_size']:
+                # TODO
                 logger.debug("will setup video size here")
             if self.options['--bitrate']:
+                # TODO
                 logger.debug("will setup bitrate here")
+            if self.options['--stream_name']:
+                streamName = self.options['--stream_name']
+                self.config['produce']['streams'][0]['name'] = self.options['--stream_name']
+            if self.options['--thread_name']:
+                self.config['produce']['streams'][0]['threads'][0]['name'] = self.options['--thread_name']
+
         # save config to a temp file
         self.configFile = os.path.join(self.runDir, 'producer.cfg')
         with io.open(self.configFile, mode="w") as f:
@@ -148,6 +156,8 @@ class Publish(Base):
             self.prefix = self.options['<prefix>']
         else:
             self.prefix = identity
+        if self.options['--instance_name']:
+            utils.ndnrtcClientInstanceName = self.options['--instance_name']
         self.ndnrtcClientPrefix = os.path.join(self.prefix.strip(), utils.ndnrtcClientInstanceName)
 
         logger.info('will publish stream under %s'%self.ndnrtcClientPrefix)

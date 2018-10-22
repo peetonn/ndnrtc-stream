@@ -13,6 +13,7 @@ ndnsecCmd = "ndnsec"
 ndnrtcClientInstanceName = 'rtc-stream'
 defaultRunTime = 10000
 streamName = "camera"
+threadName = "t"
 statFileId = "overlay-stats"
 
 samplePolicyAny = \
